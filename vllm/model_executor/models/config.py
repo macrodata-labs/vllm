@@ -14,6 +14,8 @@ if TYPE_CHECKING:
 
 logger = init_logger(__name__)
 
+ROBOMETER_TOKENIZER = "Qwen/Qwen3-VL-4B-Instruct"
+
 
 class VerifyAndUpdateConfig:
     @staticmethod
@@ -547,6 +549,8 @@ class RFMConfig(VerifyAndUpdateConfig):
         pooler_config = model_config.pooler_config
         hf_config = model_config.hf_config
 
+        if model_config.tokenizer == model_config.model:
+            model_config.tokenizer = ROBOMETER_TOKENIZER
         if pooler_config.tok_pooling_type is None:
             pooler_config.tok_pooling_type = "STEP"
         if pooler_config.step_tag_id is None:
