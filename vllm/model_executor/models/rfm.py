@@ -7,7 +7,11 @@ from transformers import Qwen3VLProcessor
 
 from vllm.config import VllmConfig
 from vllm.model_executor.layers.pooler.tokwise import pooler_for_token_classify
+from vllm.model_executor.models.config import ROBOMETER_SPECIAL_TOKENS
 from vllm.multimodal import MULTIMODAL_REGISTRY
+from vllm.transformers_utils.processor import (
+    cached_get_processor_without_dynamic_kwargs,
+)
 
 from .interfaces_base import VllmModelForPooling
 from .qwen3_vl import (
@@ -17,16 +21,11 @@ from .qwen3_vl import (
     Qwen3VLProcessingInfo,
 )
 
-ROBOMETER_SPECIAL_TOKENS = (
-    "<|split_token|>",
-    "<|reward_token|>",
-    "<|pref_token|>",
-    "<|sim_token|>",
-    "<|prog_token|>",
-)
-
 
 def ensure_robometer_special_tokens(tokenizer: object) -> None:
+    if getattr(tokenizer, "_vllm_robometer_special_tokens_added", False) is True:
+        return
+
     get_vocab = getattr(tokenizer, "get_vocab", None)
     add_special_tokens = getattr(tokenizer, "add_special_tokens", None)
     if not callable(get_vocab) or not callable(add_special_tokens):
@@ -36,6 +35,7 @@ def ensure_robometer_special_tokens(tokenizer: object) -> None:
     missing_tokens = [token for token in ROBOMETER_SPECIAL_TOKENS if token not in vocab]
     if missing_tokens:
         add_special_tokens({"additional_special_tokens": missing_tokens})
+    tokenizer._vllm_robometer_special_tokens_added = True  # type: ignore[attr-defined]
 
 
 class RFMProcessingInfo(Qwen3VLProcessingInfo):
@@ -46,10 +46,11 @@ class RFMProcessingInfo(Qwen3VLProcessingInfo):
         if tokenizer is not None:
             ensure_robometer_special_tokens(tokenizer)
 
-        processor = Qwen3VLProcessor.from_pretrained(
+        processor = cached_get_processor_without_dynamic_kwargs(
             processor_name,
             revision=model_config.tokenizer_revision,
             trust_remote_code=model_config.trust_remote_code,
+            processor_cls=Qwen3VLProcessor,
             tokenizer=tokenizer,
             use_fast=kwargs.pop("use_fast", True),
             **kwargs,
