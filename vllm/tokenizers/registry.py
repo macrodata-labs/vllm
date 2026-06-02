@@ -269,6 +269,12 @@ def cached_tokenizer_from_config(model_config: "ModelConfig", **kwargs):
     if model_config.skip_tokenizer_init:
         return None
 
+    architectures = getattr(model_config.hf_config, "architectures", None) or ()
+    if "RFM" in architectures:
+        from vllm.model_executor.models.config import ROBOMETER_SPECIAL_TOKENS
+
+        kwargs.setdefault("vllm_additional_special_tokens", ROBOMETER_SPECIAL_TOKENS)
+
     return cached_get_tokenizer(
         model_config.tokenizer,
         runner_type=model_config.runner_type,
