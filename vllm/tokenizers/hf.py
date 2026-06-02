@@ -166,6 +166,7 @@ class CachedHfTokenizer(TokenizerLike):
         trust_remote_code: bool = False,
         revision: str | None = None,
         download_dir: str | None = None,
+        vllm_additional_special_tokens: tuple[str, ...] | None = None,
         **kwargs,
     ) -> HfTokenizer:
         try:
@@ -211,5 +212,16 @@ class CachedHfTokenizer(TokenizerLike):
                 k: v.lower() for k, v in tokenizer.special_tokens_map.items()
             }
             tokenizer.add_special_tokens(special_tokens_map)
+
+        if vllm_additional_special_tokens is not None:
+            missing_tokens = [
+                token
+                for token in vllm_additional_special_tokens
+                if token not in tokenizer.get_vocab()
+            ]
+            if missing_tokens:
+                tokenizer.add_special_tokens(
+                    {"additional_special_tokens": missing_tokens}
+                )
 
         return get_cached_tokenizer(tokenizer)

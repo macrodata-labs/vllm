@@ -14,6 +14,14 @@ if TYPE_CHECKING:
 logger = init_logger(__name__)
 
 ROBOMETER_TOKENIZER = "Qwen/Qwen3-VL-4B-Instruct"
+ROBOMETER_PROG_TOKEN_ID = 151673
+ROBOMETER_SPECIAL_TOKENS = (
+    "<|split_token|>",
+    "<|reward_token|>",
+    "<|pref_token|>",
+    "<|sim_token|>",
+    "<|prog_token|>",
+)
 
 
 class VerifyAndUpdateConfig:
@@ -513,15 +521,13 @@ class RFMConfig(VerifyAndUpdateConfig):
     @staticmethod
     def verify_and_update_model_config(model_config: "ModelConfig") -> None:
         pooler_config = model_config.pooler_config
-        hf_config = model_config.hf_config
 
         if model_config.tokenizer == model_config.model:
             model_config.tokenizer = ROBOMETER_TOKENIZER
         if pooler_config.tok_pooling_type is None:
             pooler_config.tok_pooling_type = "STEP"
         if pooler_config.step_tag_id is None:
-            text_config = getattr(hf_config, "text_config", hf_config)
-            pooler_config.step_tag_id = text_config.vocab_size - 1
+            pooler_config.step_tag_id = ROBOMETER_PROG_TOKEN_ID
         if pooler_config.use_activation is None:
             pooler_config.use_activation = False
 
